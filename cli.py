@@ -15,6 +15,7 @@ from typing import Iterable
 
 from .constants import (
     AUTO_COOKIE_BROWSERS,
+    DEFAULT_CACHE_FILE,
     DEFAULT_COOKIES_FILE,
     DEFAULT_OUTPUT_ROOT,
     DEFAULT_VENV_DIR,
@@ -113,9 +114,10 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--cache-file",
         type=Path,
+        default=DEFAULT_CACHE_FILE,
         help=(
-            "Override gallery-dl's cache database path. Needed when the default "
-            "location under the user profile is not writable."
+            "gallery-dl cache database (default: %(default)s). Kept out of "
+            "%%APPDATA%% because that location is not always writable."
         ),
     )
     parser.add_argument(

@@ -19,6 +19,12 @@ DEFAULT_VENV_DIR = Path(".venv")
 
 DEFAULT_COOKIES_FILE = Path("cookies.json")
 
+# gallery-dl's own default lives under %APPDATA%, which can be read-only (Defender
+# Controlled Folder Access, locked DB, roaming profile). The tool already requires
+# the working directory to be writable because it creates downloads/ there, so the
+# cache goes next to it instead of adding a second, fragile location.
+DEFAULT_CACHE_FILE = Path(".gallery-dl-cache.sqlite3")
+
 RESERVED_PATHS = {
     "account",
     "compose",

@@ -92,7 +92,7 @@ Each profile writes a `download-summary.json` with counts, sizes, and failures.
 | `--include-quoted` | Include media from quoted posts |
 | `--exclude-pinned` | Skip the pinned post |
 | `--write-info-json` | Write per-media `.json` metadata |
-| `--cache-file` | Override gallery-dl cache location |
+| `--cache-file` | gallery-dl cache location (default `.gallery-dl-cache.sqlite3`) |
 | `--verify-auth` | Check cookies before downloading (slower) |
 | `--dry-run` | Print the gallery-dl command and exit |
 
@@ -100,14 +100,21 @@ Run `python -m xmd --help` for the full list.
 
 ## Troubleshooting
 
-**"found no media for this profile"** — the cookies expired or were never loaded.
-Re-export them. The tool exits with code 17 for this case rather than reporting success.
+**`error: gallery-dl: ...`** — this is gallery-dl's real error, passed through
+exactly as reported. The most common ones:
+
+- `OperationalError: attempt to write a readonly database` — the cache database
+  could not be written. The tool keeps its cache at
+  `.gallery-dl-cache.sqlite3` in the working directory for this reason; if you
+  overrode `--cache-file`, point it somewhere writable.
+- `AuthRequired` — the cookies are missing or expired.
+
+**`found no media for this profile`** — gallery-dl extracted nothing *and*
+reported no error. Either the profile genuinely has no media, or X returned an
+empty timeline. The tool exits with code 17 here rather than reporting success.
 
 **`--cookies-browser` finds no database`** — the browser cookie store is locked
 because the browser is running. Close it first.
-
-**Read-only cache errors** — pass `--cache-file` to place gallery-dl's SQLite cache
-somewhere writable.
 
 ## Project layout
 
