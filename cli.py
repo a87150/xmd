@@ -474,7 +474,11 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     if args.cookies_file:
         resolved = args.cookies_file.expanduser().resolve()
-        cookies_path = ensure_netscape_cookies(resolved)
+        try:
+            cookies_path = ensure_netscape_cookies(resolved)
+        except RuntimeError as exc:
+            print(f"error: bad cookie file {resolved}: {exc}", file=sys.stderr)
+            return 16
         if cookies_path != resolved:
             print(f"[cookies] Converted JSON export to Netscape format: {cookies_path}", file=sys.stderr)
         args.cookies_file = cookies_path

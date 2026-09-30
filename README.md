@@ -41,6 +41,21 @@ with or without `--cookies-file`.
 [cookies] Converted JSON export to Netscape format: ...\cookies.netscape.json
 ```
 
+### The cookie file is checked before downloading
+
+Every cookie file is validated up front, so a stale export fails in under a second
+instead of after a slow run that downloads nothing:
+
+- **Missing or expired `auth_token`** — an error. X cannot be read without it, and
+  the run stops with exit code 16 before any request is made. No converted file is
+  written.
+- **Missing or expired `ct0`** — a warning only. gallery-dl generates a `ct0` when
+  one is absent, so this is not fatal, but X may reject a generated one. A full
+  x.com export is preferred.
+
+Expiry is judged only when the export states it, so session cookies are never
+falsely reported as expired.
+
 ### Reading cookies straight from a browser
 
 `--cookies-browser` passes through to gallery-dl, but it does **not** work with

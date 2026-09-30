@@ -4,7 +4,7 @@ import json
 import shutil
 from pathlib import Path
 
-from .cookies import ensure_netscape_cookies
+from .cookies import ensure_netscape_cookies, validate_cookies
 from .gallery import parse_gallery_messages
 
 SCRATCH = Path(__file__).resolve().parent.parent / "_scratch_cookies"
@@ -69,9 +69,26 @@ def test_converts_json_export():
 
 def test_passes_through_netscape_file():
     src = _write(
-        "cookies.txt", "# Netscape HTTP Cookie File\n.x.com\tTRUE\t/\tTRUE\t0\ta\tb\n"
+        "cookies.txt",
+        "# Netscape HTTP Cookie File\n"
+        ".x.com\tTRUE\t/\tTRUE\t0\tauth_token\tsecret\n"
+        ".x.com\tTRUE\t/\tTRUE\t0\tct0\tcsrf\n",
     )
     assert ensure_netscape_cookies(src) == src, "existing netscape file must pass through"
+
+
+def test_rejects_netscape_file_with_expired_auth_token():
+    src = _write(
+        "expired.txt",
+        "# Netscape HTTP Cookie File\n"
+        ".x.com\tTRUE\t/\tTRUE\t1000000000\tauth_token\told\n",
+    )
+    try:
+        ensure_netscape_cookies(src)
+    except RuntimeError as exc:
+        assert "expired" in str(exc), str(exc)
+    else:
+        raise AssertionError("an expired auth_token in a netscape file must be rejected")
 
 
 def test_surfaces_embedded_gallery_errors():
@@ -98,13 +115,57 @@ def test_keeps_items_when_some_fail():
     assert items[0]["url"].endswith("a.jpg")
 
 
+def test_rejects_missing_auth_token():
+    try:
+        validate_cookies({"guest_id": None})
+    except RuntimeError as exc:
+        assert "auth_token" in str(exc), str(exc)
+    else:
+        raise AssertionError("a cookie set without auth_token cannot authenticate")
+
+
+def test_rejects_expired_auth_token():
+    try:
+        validate_cookies({"auth_token": 1_000_000.0, "ct0": None})
+    except RuntimeError as exc:
+        assert "expired" in str(exc), str(exc)
+    else:
+        raise AssertionError("an expired auth_token must be rejected")
+
+
+def test_accepts_valid_cookies_and_tolerates_missing_ct0():
+    future = 4_000_000_000.0
+    # A missing ct0 is not fatal: gallery-dl generates one.
+    validate_cookies({"auth_token": future})
+    validate_cookies({"auth_token": future, "ct0": future})
+    # A session cookie declares no expiry and must not be treated as expired.
+    validate_cookies({"auth_token": None})
+
+
+def test_json_export_without_auth_token_is_rejected_before_conversion():
+    src = _write("bad.json", json.dumps([{"name": "guest_id", "value": "1"}]))
+    try:
+        ensure_netscape_cookies(src)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("conversion must not silently accept unusable cookies")
+    converted = src.with_name(src.stem + ".netscape" + src.suffix)
+    assert not converted.exists(), "no converted file should be written when validation fails"
+
+
 def main():
     try:
         test_converts_json_export()
         test_passes_through_netscape_file()
         test_surfaces_embedded_gallery_errors()
         test_keeps_items_when_some_fail()
-        print("ok - 4 checks passed")
+        test_rejects_missing_auth_token()
+        test_rejects_expired_auth_token()
+        test_accepts_valid_cookies_and_tolerates_missing_ct0()
+        test_json_export_without_auth_token_is_rejected_before_conversion()
+        test_rejects_netscape_file_with_expired_auth_token()
+        print("ok - 9 checks passed")
         return 0
     finally:
         shutil.rmtree(SCRATCH, ignore_errors=True)
