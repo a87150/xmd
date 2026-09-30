@@ -1,0 +1,18 @@
+# Secrets and session state - never commit these.
+cookies*.json
+cookies.txt
+
+# Downloaded media and run artifacts.
+downloads/
+
+# Toolchain bootstrapped at runtime.
+.venv/
+
+# Scratch.
+_scratch_cookies/
+*.netscape.json
+*.sqlite3
+
+__pycache__/
+*.py[cod]
+*.egg-info/
