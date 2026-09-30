@@ -440,8 +440,9 @@ def run_profile(
 
     if summary["status"] == "empty":
         print(
-            "[done] Downloader found no media for this profile. The timeline is likely "
-            "auth-walled: re-export fresh X cookies and pass them via --cookies-file.",
+            "[done] gallery-dl extracted no media and reported no error. Either this "
+            "profile has no media, or X returned an empty timeline. If you expect "
+            "media, re-export fresh X cookies (auth_token + ct0).",
             file=sys.stderr,
         )
         return 17

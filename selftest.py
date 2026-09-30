@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 
 from .cookies import ensure_netscape_cookies
+from .gallery import parse_gallery_messages
 
 SCRATCH = Path(__file__).resolve().parent.parent / "_scratch_cookies"
 
@@ -73,11 +74,37 @@ def test_passes_through_netscape_file():
     assert ensure_netscape_cookies(src) == src, "existing netscape file must pass through"
 
 
+def test_surfaces_embedded_gallery_errors():
+    # gallery-dl exits 0 and hides failures as [-1, {...}] in its JSON stream.
+    payload = json.dumps([[-1, {"error": "OperationalError", "message": "readonly database"}]])
+    try:
+        parse_gallery_messages(payload)
+    except RuntimeError as exc:
+        assert "OperationalError" in str(exc), f"error name lost: {exc}"
+        assert "readonly database" in str(exc), f"error detail lost: {exc}"
+    else:
+        raise AssertionError("error-only stream must raise, not return 0 items")
+
+
+def test_keeps_items_when_some_fail():
+    payload = json.dumps(
+        [
+            [3, "https://pbs.twimg.com/media/a.jpg", {"num": 1}],
+            [-1, {"error": "HttpError", "message": "404"}],
+        ]
+    )
+    items = parse_gallery_messages(payload)
+    assert len(items) == 1, f"a per-item error must not discard good items: {items}"
+    assert items[0]["url"].endswith("a.jpg")
+
+
 def main():
     try:
         test_converts_json_export()
         test_passes_through_netscape_file()
-        print("ok - 2 checks passed")
+        test_surfaces_embedded_gallery_errors()
+        test_keeps_items_when_some_fail()
+        print("ok - 4 checks passed")
         return 0
     finally:
         shutil.rmtree(SCRATCH, ignore_errors=True)

@@ -88,14 +88,28 @@ def extract_media_items(command: list[str], env: dict[str, str]) -> list[dict[st
     payload = result.stdout.strip()
     if not payload:
         return []
+    return parse_gallery_messages(payload)
 
+
+def parse_gallery_messages(payload: str) -> list[dict[str, object]]:
+    """Turn gallery-dl's -j JSON stream into media items, surfacing embedded errors."""
     try:
         messages = json.loads(payload)
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"failed to parse gallery-dl JSON output: {exc}") from exc
 
     items: list[dict[str, object]] = []
+    errors: list[str] = []
     for entry in messages:
+        # gallery-dl exits 0 and reports failures as [-1, {"error": ...}] inside the
+        # JSON stream. Those were silently dropped, turning every failure into
+        # "found 0 media". Collect them and surface them instead.
+        if isinstance(entry, list) and len(entry) >= 2 and isinstance(entry[1], dict):
+            if "error" in entry[1]:
+                label = entry[1].get("error")
+                detail = entry[1].get("message") or entry[1].get("exception") or ""
+                errors.append(f"{label}: {detail}".rstrip(": "))
+                continue
         if (
             isinstance(entry, list)
             and len(entry) >= 3
@@ -104,6 +118,15 @@ def extract_media_items(command: list[str], env: dict[str, str]) -> list[dict[st
             and isinstance(entry[2], dict)
         ):
             items.append({"url": entry[1], "metadata": entry[2]})
+
+    if errors and not items:
+        raise RuntimeError("gallery-dl: " + "; ".join(dict.fromkeys(errors)))
+    if errors:
+        print(
+            f"[warn] gallery-dl reported {len(errors)} error(s); continuing with "
+            f"{len(items)} extracted item(s): {' | '.join(dict.fromkeys(errors))}",
+            file=sys.stderr,
+        )
     return items
 
 def write_media_info_file(path: Path, source_url: str, metadata: dict[str, object]) -> None:
