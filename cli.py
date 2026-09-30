@@ -26,6 +26,7 @@ from .constants import (
 from .cookies import ensure_netscape_cookies
 
 from .gallery import (
+    browser_cookie_hint,
     build_gallery_dl_command,
     download_media_items,
     extract_media_items,
@@ -318,6 +319,7 @@ def run_profile(
                 f"error: cookies from {args.cookies_browser} were loaded, but X still rejected the request.",
                 file=sys.stderr,
             )
+            browser_cookie_hint([args.cookies_browser.split(":", 1)[0].split("/", 1)[0]])
             return preflight_result.returncode or 16
     elif args.cookies_browser:
         print(

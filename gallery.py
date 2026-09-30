@@ -17,7 +17,13 @@ from threading import Lock
 from typing import Iterable
 from urllib.request import Request, urlopen
 
-from .constants import AUTO_COOKIE_BROWSERS, AUTH_REQUIRED_MARKERS, COOKIE_DB_MISSING_MARKERS, DOWNLOAD_USER_AGENT
+from .constants import (
+    AUTO_COOKIE_BROWSERS,
+    AUTH_REQUIRED_MARKERS,
+    CHROMIUM_BROWSERS,
+    COOKIE_DB_MISSING_MARKERS,
+    DOWNLOAD_USER_AGENT,
+)
 
 from .media import archive_key_from_metadata, insert_archive_entry, load_archive_keys, target_path_for_media
 
@@ -357,6 +363,34 @@ def is_cookie_db_missing(output: str) -> bool:
     lowered = output.lower()
     return all(marker in lowered for marker in COOKIE_DB_MISSING_MARKERS)
 
+def browser_cookie_hint(tried: Iterable[str]) -> None:
+    """Explain why reading cookies straight from a browser usually fails.
+
+    gallery-dl has no support for Chromium's app-bound encryption (v20 cookies),
+    which Chrome/Edge/Brave/Vivaldi/Opera all use from version 127 on. Those
+    browsers are worth trying anyway on older installs, but the answer is almost
+    always to export cookies to a file instead.
+    """
+    tried_list = list(tried)
+    chromium = [name for name in tried_list if name in CHROMIUM_BROWSERS]
+    print(
+        "[auth] None of these browser cookie stores worked: " + ", ".join(tried_list),
+        file=sys.stderr,
+    )
+    if chromium:
+        print(
+            f"[auth] Note: {', '.join(chromium)} encrypt cookies with app-bound "
+            "encryption since Chromium 127, and gallery-dl cannot decrypt those. "
+            "Use a cookies file instead (see README).",
+            file=sys.stderr,
+        )
+    print(
+        '[auth] Export cookies from a logged-in X session to ./cookies.json '
+        '(Cookie-Editor: export the x.com entry as JSON), then rerun.',
+        file=sys.stderr,
+    )
+
+
 def pick_browser_cookies(
     gallery_bin: Path,
     target_url: str,
@@ -378,7 +412,8 @@ def pick_browser_cookies(
 
     print("[auth] X requires authenticated cookies for this profile. Trying browser sessions...", file=sys.stderr)
 
-    for browser in candidate_browsers or AUTO_COOKIE_BROWSERS:
+    candidates = list(candidate_browsers or AUTO_COOKIE_BROWSERS)
+    for browser in candidates:
         print(f"[auth] Trying cookies from {browser}...", file=sys.stderr)
         browser_command = build_gallery_dl_command(
             gallery_bin,
@@ -393,4 +428,5 @@ def pick_browser_cookies(
             print(f"[auth] Using cookies from {browser}.", file=sys.stderr)
             return browser, None
 
+    browser_cookie_hint(candidates)
     return None, result.stdout

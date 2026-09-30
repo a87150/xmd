@@ -66,6 +66,12 @@ AUTO_COOKIE_BROWSERS = (
     "opera",
 )
 
+# Browsers that encrypt cookies with Chromium app-bound encryption (v127+),
+# which gallery-dl cannot decrypt.
+CHROMIUM_BROWSERS = frozenset(
+    {"chrome", "chromium", "edge", "brave", "vivaldi", "opera", "thorium"}
+)
+
 AUTH_REQUIRED_MARKERS = (
     "AuthRequired",
     "authenticated cookies needed to access this timeline",

@@ -15,22 +15,47 @@ Handle forms all work: `elonmusk`, `@elonmusk`, `x.com/elonmusk`,
 
 ## Authentication
 
-X requires a logged-in session to read a profile timeline. Export cookies from a
-browser where you are logged in to X, save them as `cookies.json` next to where you
-run the command, and you are done — it is picked up automatically.
+X requires a logged-in session to read a profile timeline, so the tool needs your
+X cookies. Export them to `cookies.json` and place it next to where you run the
+command — it is picked up automatically.
 
-Both the JSON array format (most browser extensions) and Netscape `cookies.txt` work.
-A JSON export is converted to Netscape automatically on first use.
+### Exporting cookies with Cookie-Editor
 
-The cookies you need are `auth_token` and `ct0`. If the tool reports that it found
-no media, the cookies have expired: export a fresh copy.
+1. Install the [Cookie-Editor](https://chromewebstore.google.com/detail/cookie-editor) extension
+   for your browser.
+2. Log in to [x.com](https://x.com) in a normal tab and make sure you are signed in.
+3. Click the Cookie-Editor icon in the toolbar.
+4. Find the domain **`x.com`** in the list and expand it.
+5. Confirm it contains **`auth_token`** and **`ct0`**. Those two are the ones that
+   matter; without them X will reject the request.
+6. Click **Export** (the download/arrow icon) in the Cookie-Editor window.
+7. Choose **JSON** as the format and save the file.
+8. Rename it to `cookies.json` and put it in the directory you run the command from.
 
-Alternative sources:
+On the first run the tool converts the JSON export to Netscape format automatically
+and prints the path it wrote. Netscape `cookies.txt` files are also accepted as-is,
+with or without `--cookies-file`.
+
+```
+[cookies] Using cookies.json by default.
+[cookies] Converted JSON export to Netscape format: ...\cookies.netscape.json
+```
+
+### Reading cookies straight from a browser
+
+`--cookies-browser` passes through to gallery-dl, but it does **not** work with
+Chrome, Edge, Brave, Vivaldi or Opera 127 or newer: those browsers encrypt cookies
+with app-bound encryption, which gallery-dl cannot decrypt. Expect it to fail on a
+modern Chromium browser. Firefox still works. When it fails, the tool says so.
 
 ```powershell
-python -m xmd elonmusk --cookies-browser edge   # read cookies from a local browser
-python -m xmd elonmusk --cookies-file my.txt    # explicit Netscape file
+python -m xmd elonmusk --cookies-browser firefox  # may work
+python -m xmd elonmusk --cookies-browser edge     # likely fails, see the note
+python -m xmd elonmusk --cookies-file my.txt       # explicit Netscape file
 ```
+
+Cookies expire. When a run extracts nothing and reports no error, export a fresh
+copy.
 
 ## Batch
 
